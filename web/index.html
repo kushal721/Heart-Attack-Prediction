@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heart Disease Risk</title>
+  <meta name="description" content="Estimate heart disease risk from thirteen clinical measurements, with a model tested on real patients from the Cleveland heart study.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c4432f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script>
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved) document.documentElement.dataset.theme = saved;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top">
+        <span data-icon="heart"></span>
+        <span>Cardiac Risk</span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#assess">Assess</a>
+        <a href="#model">Model</a>
+        <a href="#data">Data</a>
+        <a href="#about">About</a>
+      </nav>
+      <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch colour theme">
+        <span data-icon="contrast"></span>
+      </button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="intro wrap">
+      <p class="eyebrow">Cleveland heart study, 303 patients</p>
+      <h1>Heart disease risk, estimated from <em>thirteen</em> routine clinical measurements.</h1>
+      <p class="lede" id="lede">Loading model details.</p>
+    </section>
+
+    <!-- ============================================================ Assess -->
+    <section class="section wrap" id="assess" aria-labelledby="assess-title">
+      <div class="section-head">
+        <h2 id="assess-title">Assess a patient</h2>
+        <p>Change any value and the estimate updates immediately.</p>
+      </div>
+
+      <div class="assess-grid">
+        <div class="assess-form">
+          <p class="form-hint"><span data-icon="info"></span>Only know some values? Leave the rest blank or set them to Unknown. The estimate then shows a likely range.</p>
+          <div class="demo-strip" role="group" aria-labelledby="demo-title">
+            <p class="demo-copy">
+              <span class="demo-title" id="demo-title"><span data-icon="users"></span>Real demo</span>
+              Load one of the <span id="demo-pool">61</span> test patients the model never saw, and compare its estimate with what actually happened.
+            </p>
+            <div class="demo-actions">
+              <button class="btn btn-primary" type="button" data-demo="">
+                <span data-icon="shuffle"></span>Random patient
+              </button>
+              <button class="btn" type="button" data-demo="1">With heart disease</button>
+              <button class="btn" type="button" data-demo="0">Without heart disease</button>
+              <span class="actions-gap"></span>
+              <button class="btn btn-quiet" type="button" id="clear">
+                <span data-icon="eraser"></span>Clear all
+              </button>
+              <button class="btn btn-quiet" type="button" id="reset">
+                <span data-icon="reset"></span>Reset
+              </button>
+            </div>
+          </div>
+
+          <form id="patient-form" novalidate></form>
+        </div>
+
+        <aside class="result" aria-live="polite" aria-labelledby="result-title">
+          <p class="result-label" id="result-title">Estimated probability of heart disease</p>
+          <div class="result-head">
+            <p class="result-value"><span id="prob">--</span><span class="result-unit">%</span></p>
+            <p class="band" id="band"><span class="band-dot"></span><span id="band-text">Calculating</span></p>
+          </div>
+          <p class="range-text" id="range-text" hidden></p>
+
+          <div class="scale" aria-hidden="true">
+            <div class="scale-track">
+              <span class="scale-seg seg-low"></span>
+              <span class="scale-seg seg-mid"></span>
+              <span class="scale-seg seg-high"></span>
+              <span class="scale-range" id="scale-range" hidden></span>
+              <span class="scale-threshold"></span>
+              <span class="scale-marker" id="marker"></span>
+            </div>
+            <div class="scale-ticks">
+              <span style="left:0%">0</span>
+              <span style="left:30%">30</span>
+              <span style="left:50%" class="tick-threshold">50 threshold</span>
+              <span style="left:60%">60</span>
+              <span style="left:100%">100</span>
+            </div>
+          </div>
+
+          <p class="verdict" id="verdict"></p>
+
+          <div class="demo-result" id="demo-result" hidden></div>
+
+          <div class="drivers">
+            <div class="drivers-head">
+              <p class="drivers-title">What moves this estimate</p>
+              <p class="legend">
+                <span class="key"><span class="swatch swatch-red"></span>Raises risk</span>
+                <span class="key"><span class="swatch swatch-blue"></span>Lowers risk</span>
+              </p>
+            </div>
+            <ol class="driver-list" id="drivers"></ol>
+            <p class="fine">Percentage points each value moves the estimate, compared with leaving that value unknown.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============================================================ Model -->
+    <section class="section wrap" id="model" aria-labelledby="model-title">
+      <div class="section-head">
+        <h2 id="model-title">How well it works</h2>
+        <p id="model-sub">Every figure below comes from patients the model never trained on.</p>
+      </div>
+
+      <div class="model-top">
+        <div class="hero-figure">
+          <p class="hero-value" id="hero-accuracy">--</p>
+          <p class="hero-caption" id="hero-caption">of held-out patients classified correctly</p>
+        </div>
+        <dl class="metric-list" id="metric-list"></dl>
+      </div>
+
+      <div class="chart-pair">
+        <figure class="chart-block">
+          <figcaption>
+            <h3>Where it is right and wrong</h3>
+            <p>Confusion matrix on the held-out test set.</p>
+          </figcaption>
+          <div id="confusion"></div>
+        </figure>
+        <figure class="chart-block">
+          <figcaption>
+            <h3>Ranking ability</h3>
+            <p>ROC curve. Hover to read the trade-off at each threshold.</p>
+          </figcaption>
+          <div class="chart" id="roc"></div>
+        </figure>
+      </div>
+
+      <div class="chart-block">
+        <h3>Four models compared</h3>
+        <p class="block-sub">Each was tuned with 5-fold cross-validation on the training patients. The highest cross-validated ROC-AUC wins; the test set plays no part in the choice.</p>
+        <div class="table-wrap">
+          <table class="data-table" id="comparison"></table>
+        </div>
+      </div>
+
+      <figure class="chart-block">
+        <figcaption>
+          <h3>Which measurements matter most</h3>
+          <p>Drop in test ROC-AUC when a measurement is randomly shuffled. Longer bars mean the model leans on it more.</p>
+        </figcaption>
+        <div class="chart" id="importance"></div>
+        <details class="table-view">
+          <summary><span data-icon="table"></span>View as table</summary>
+          <div class="table-wrap"><table class="data-table" id="importance-table"></table></div>
+        </details>
+      </figure>
+    </section>
+
+    <!-- ============================================================ Data -->
+    <section class="section wrap" id="data" aria-labelledby="data-title">
+      <div class="section-head">
+        <h2 id="data-title">Explore the study data</h2>
+        <p id="data-sub">How each measurement differs between patients with and without heart disease.</p>
+      </div>
+
+      <div class="feature-picker" id="feature-picker" role="tablist" aria-label="Measurement"></div>
+
+      <figure class="chart-block">
+        <figcaption class="explore-caption">
+          <div>
+            <h3 id="explore-title">Age</h3>
+            <p id="explore-sub"></p>
+          </div>
+          <p class="legend" id="explore-legend"></p>
+        </figcaption>
+        <div class="chart" id="explore"></div>
+        <details class="table-view">
+          <summary><span data-icon="table"></span>View as table</summary>
+          <div class="table-wrap"><table class="data-table" id="explore-table"></table></div>
+        </details>
+      </figure>
+    </section>
+
+    <!-- ============================================================ About -->
+    <section class="section wrap about" id="about" aria-labelledby="about-title">
+      <div class="section-head">
+        <h2 id="about-title">About this model</h2>
+      </div>
+
+      <div class="about-row">
+        <h3><span data-icon="database"></span>The data</h3>
+        <div>
+          <p>The 303 patients of the Cleveland Clinic heart disease study (1988), as published on Kaggle. The source file has 1,125 rows, but most rows are repeated copies of the same patients. Copies are removed before anything else, so a patient can never appear in both the training and the test set.</p>
+        </div>
+      </div>
+
+      <div class="about-row">
+        <h3><span data-icon="wrench"></span>Corrected labels</h3>
+        <div>
+          <p>This copy of the data uses different codes from the UCI documentation. Its value counts match the original study exactly, which reveals what each code really means:</p>
+          <ul>
+            <li>The <code>target</code> column is inverted. <code>target = 1</code> is the group without heart disease: younger patients with a higher maximum heart rate, less ST depression, less angina and fewer blocked vessels. The model predicts <code>disease = 1 - target</code>.</li>
+            <li>Chest pain code 0 is asymptomatic, the most common type among patients with heart disease.</li>
+            <li>ST slope 0, 1 and 2 are downsloping, flat and upsloping. Thallium 1, 2 and 3 are fixed defect, normal and reversible defect.</li>
+            <li><code>ca = 4</code> and <code>thal = 0</code> mark values missing from the original study. The model fills these in with the typical value.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="about-row">
+        <h3><span data-icon="chart"></span>The method</h3>
+        <div>
+          <p>Patients are split 80/20 into training and test sets, stratified by outcome. Logistic regression, random forest, gradient boosting and a decision tree are each tuned with 5-fold cross-validation on the training set. The model with the best cross-validated ROC-AUC is deployed as trained and scored once on the test set.</p>
+        </div>
+      </div>
+
+      <div class="about-row">
+        <h3><span data-icon="info"></span>Limits</h3>
+        <div>
+          <p>About 300 patients from one hospital, collected decades ago. With 61 test patients, the accuracy figure could move by several points on a different split. Use this to learn how such models behave. It is not a medical device and must never guide a diagnosis.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <p>For education only. Not a medical device and not a diagnosis.</p>
+    <p id="footer-model"></p>
+  </footer>
+
+  <a class="mini-result" id="mini-result" href="#result-title" hidden>
+    <span>Chance of heart disease</span>
+    <strong><span id="mini-prob">--</span>% <span id="mini-band"></span></strong>
+  </a>
+
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
